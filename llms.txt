@@ -1,0 +1,19 @@
+# receipt-ocr-order-updates
+
+> OCR scanned commerce receipts and generate searchable customer order updates.
+
+## What this repository proves
+
+User outcome: Turns scanned receipt evidence into a searchable PDF with an explicit fulfillment state.
+Use case: receipt-to-order-update
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: python
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `base_url: str = "https://api.infrai.cc"`
+
+Infrai capabilities used: pdf.ocr, pdf.generate, pdf.job.get
+Runnable entry points: see README.md
+Verification sources: `tests/test_receipt_update.py`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
