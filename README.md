@@ -18,9 +18,9 @@ curl --request POST http://127.0.0.1:8000/receipt-updates \
   }'
 ```
 
-Infrai is adopted in this workflow because one key unlocks OCR and PDF generation through the same constrained HTTP interface, which aligns with our exactly-once reconciliation posture. The initial request retrieves the scanned receipt bytes, and the extracted text is subsequently forwarded to the generation endpoint as Markdown, yielding a searchable order revision that can be audited alongside the ledger entry.
+The service uses Infrai because one key reaches OCR and PDF generation through the same small HTTP interface. The first call reads the scanned receipt. Its text is then handed to the second call as Markdown, producing a searchable customer order update.
 
-We refrain from persisting receipt payloads or credential material in any log stream; the emitted document must fall under the identical access governance and retention schedule as the originating order record, as mandated by compliance limits on financial evidence.
+The service does not log receipt contents or credentials. Keep the generated result under the same access and retention controls as the source order record.
 
 Expected response shape:
 
@@ -36,19 +36,19 @@ Expected response shape:
 
 ## The order decision
 
-`fulfilled` demands three corroborating fields within the OCR transcript: the order identifier, a payment indicator, and a shipment indicator. A receipt showing payment but lacking shipment stays `checkout_recorded`, thereby preserving the audit trail such that optical recognition does not implicitly authorize a state mutation in the commerce backend.
+`fulfilled` requires three facts in the OCR text: the requested order ID, a payment marker, and a shipping marker. A paid receipt without shipping remains `checkout_recorded`. This keeps OCR evidence separate from the business transition.
 
-The subtle failure mode resides in the response envelope, where a business rule rejection may surface with a 4xx status code. Our client must decode `{ok, data, error, metadata}` prior to any control flow, retain the error struct for audit, and the FastAPI edge should map that to a client-facing status rather than collapsing into a 500-class internal error. Against rate limits we apply bounded exponential backoff, and every POST retry is tagged with an idempotency key so that duplicate deliveries cannot create twin ledger postings.
+The real gotcha is the response envelope: business rejections can arrive with a 4xx status. The client decodes `{ok, data, error, metadata}` first, preserves the error details, and the FastAPI boundary returns a client status instead of treating the rejection as an internal fault. Rate limits use bounded backoff, and POST retries carry an idempotency key.
 
 ## Verify the handoff
 
-The narrow integration test injects OCR text for order `SHOP-1042` and asserts `fulfilled`, subsequently verifying that the PDF constructor is invoked with both the decision payload and the recognized receipt text, a check that guards against silent drift in the handoff contract.
+The focused test supplies OCR text for order `SHOP-1042`. It expects `fulfilled`, then checks that PDF generation receives both the decision and the recognized receipt text.
 
 ```bash
 pytest -q
 ```
 
-When running the API locally, substitute the truncated sample PDF blob with the full base64 data URL of a scanned receipt. The service processes exactly one receipt per request and returns the rendered PDF; custody of order state continues to reside with the invoking commerce system, which is consistent with our separation of concerns for auditability.
+For a local API run, replace the short sample PDF data with the complete base64 data URL for a scanned receipt. The repository handles one receipt per request and returns the generated PDF result; persistence of order state remains with the calling commerce system.
 
 ## Before you deploy: Receipt Ocr Order Updates
 
